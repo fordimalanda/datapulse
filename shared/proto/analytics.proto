@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package analytics;
+
+// Service exposé par Python et appelé par NestJS
+service AnalyticsService {
+  rpc ProcessData (DataRequest) returns (DataResponse);
+  rpc StreamMetrics (MetricRequest) returns (stream MetricPoint);
+}
+
+message DataRequest {
+  string dataset_id = 1;
+  repeated double raw_values = 2;
+  string timeframe = 3; // ex: "1h", "1d"
+}
+
+message DataResponse {
+  string dataset_id = 1;
+  double mean = 2;
+  double min = 3;
+  double max = 4;
+  repeated double processed_values = 5;
+  int64 timestamp = 6;
+}
+
+message MetricRequest {
+  string metric_type = 1;
+  int32 interval_seconds = 2;
+}
+
+message MetricPoint {
+  string metric_type = 1;
+  double value = 2;
+  int64 timestamp = 3;
+}
