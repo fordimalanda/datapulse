@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # 1. Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: datapulse-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-datapulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datapulse_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-datapulse_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Cache & Pub/Sub Redis
+  redis:
+    image: redis:7-alpine
+    container_name: datapulse-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 3. Microservice Python (gRPC)
+  analytics-service:
+    build:
+      context: .
+      dockerfile: ./apps/analytics-service/Dockerfile
+    container_name: datapulse-analytics
+    restart: always
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./shared/proto:/app/proto
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # 4. Gateway NestJS (Backend principal)
+  gateway:
+    build:
+      context: .
+      dockerfile: ./apps/gateway/Dockerfile
+    container_name: datapulse-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://datapulse:datapulse_pass@postgres:5432/datapulse_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ANALYTICS_GRPC_URL=analytics-service:50051
+    depends_on:
+      - postgres
+      - redis
+      - analytics-service
+
+  # 5. Front-End Next.js
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+    container_name: datapulse-web
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    depends_on:
+      - gateway
+
+volumes:
+  postgres_data:
+  redis_data:
