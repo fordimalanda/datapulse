@@ -2,19 +2,24 @@ syntax = "proto3";
 
 package analytics;
 
-// Service exposé par Python et appelé par NestJS
+// Définition du service gRPC Analytics
 service AnalyticsService {
-  rpc ProcessData (DataRequest) returns (DataResponse);
+  // RPC Unaire : Traitement ponctuel d'un jeu de données
+  rpc ProcessData (AnalyticsRequest) returns (AnalyticsResponse);
+
+  // RPC de Streaming Serveur : Flux continu de métriques temps réel
   rpc StreamMetrics (MetricRequest) returns (stream MetricPoint);
 }
 
-message DataRequest {
+// Requête pour le traitement de données ponctuel
+message AnalyticsRequest {
   string dataset_id = 1;
   repeated double raw_values = 2;
-  string timeframe = 3; // ex: "1h", "1d"
+  string timeframe = 3;
 }
 
-message DataResponse {
+// Réponse du traitement de données
+message AnalyticsResponse {
   string dataset_id = 1;
   double mean = 2;
   double min = 3;
@@ -23,11 +28,13 @@ message DataResponse {
   int64 timestamp = 6;
 }
 
+// Requête pour s'abonner au flux de métriques
 message MetricRequest {
   string metric_type = 1;
   int32 interval_seconds = 2;
 }
 
+// Point de donnée unitaire transmis dans le flux
 message MetricPoint {
   string metric_type = 1;
   double value = 2;
