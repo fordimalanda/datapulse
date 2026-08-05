@@ -1,12 +1,23 @@
+import sys
+import os
 import concurrent.futures
 import time
 import math
 import random
 import grpc
 
-# Import des modules générés automatiquement depuis analytics.proto
-import src.proto.analytics_pb2 as analytics_pb2
-import src.proto.analytics_pb2_grpc as analytics_pb2_grpc
+# Ajout dynamique du dossier /app et du sous-dossier proto au PYTHONPATH
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(CURRENT_DIR)
+sys.path.append(os.path.join(CURRENT_DIR, "proto"))
+
+# Importation sécurisée des fichiers Protobuf générés
+try:
+    import proto.analytics_pb2 as analytics_pb2
+    import proto.analytics_pb2_grpc as analytics_pb2_grpc
+except ModuleNotFoundError:
+    import analytics_pb2
+    import analytics_pb2_grpc
 
 
 class AnalyticsServiceServicer(analytics_pb2_grpc.AnalyticsServiceServicer):
@@ -27,7 +38,7 @@ class AnalyticsServiceServicer(analytics_pb2_grpc.AnalyticsServiceServicer):
             min_val = float(min(raw_values))
             max_val = float(max(raw_values))
 
-        # Simulation de transformation sur les valeurs
+        # Simulation de transformation des valeurs
         processed = [round(v * 1.05, 2) for v in raw_values]
 
         return analytics_pb2.AnalyticsResponse(
@@ -51,7 +62,7 @@ class AnalyticsServiceServicer(analytics_pb2_grpc.AnalyticsServiceServicer):
         step = 0
         try:
             while context.is_active():
-                # Génération d'une courbe réaliste (onde sinusoïdale + composante aléatoire)
+                # Génération d'une courbe sinusoïdale réaliste avec du bruit
                 base_val = 45 + 25 * math.sin(step * 0.2)
                 noise = random.uniform(-5.0, 5.0)
                 current_value = round(max(0.0, min(100.0, base_val + noise)), 2)

@@ -38,6 +38,7 @@ services:
       - ./shared/proto:/app/proto
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:/app/proto
 
   # 4. Gateway NestJS (Backend principal sur le port hôte 3001)
   gateway:
