@@ -6,18 +6,23 @@ import { AnalyticsGateway } from './modules/analytics/analytics.gateway';
 
 @Module({
   imports: [
+    // Configuration du client gRPC pour communiquer avec le conteneur Python (analytics-service)
     ClientsModule.register([
       {
         name: 'ANALYTICS_PACKAGE',
         transport: Transport.GRPC,
         options: {
-          package: 'analytics',
-          protoPath: join(__dirname, '../../../shared/proto/analytics.proto'),
-          url: process.env.ANALYTICS_GRPC_URL || 'analytics-service:50051',
+          package: 'analytics', // Doit correspondre au package défini dans analytics.proto
+          protoPath: join(process.cwd(), '../../shared/proto/analytics.proto'),
+          url: process.env.ANALYTICS_SERVICE_URL || 'analytics-service:50051', // Hôte Docker Compose
         },
       },
     ]),
   ],
-  providers: [AnalyticsService, AnalyticsGateway],
+  controllers: [],
+  providers: [
+    AnalyticsService,
+    AnalyticsGateway,
+  ],
 })
 export class AppModule {}
