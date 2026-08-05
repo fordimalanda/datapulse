@@ -7,7 +7,8 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ClientGrpc } from '@nestjs/microservices';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, tap, throwError } from 'rxjs';
+import { PrismaService } from '../prisma/prisma.service';
 
 // --- Contrats de données gRPC (DTOs / Interfaces) ---
 
@@ -50,6 +51,7 @@ export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     @Inject('ANALYTICS_PACKAGE') private readonly client: ClientGrpc,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -62,7 +64,7 @@ export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('Client gRPC AnalyticsService initialisé avec succès.');
     } catch (error) {
       this.logger.error(
-        'Échec de l\'initialisation du service gRPC AnalyticsService',
+        "Échec de l'initialisation du service gRPC AnalyticsService",
         error,
       );
     }
@@ -79,7 +81,7 @@ export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Envoie un jeu de données à traiter par le microservice Python (RPC Unaire)
+   * Appelle gRPC processData (RPC Unaire) ET persiste automatiquement les résultats dans PostgreSQL via Prisma
    *
    * @param datasetId Identifiant unique du dataset
    * @param rawValues Tableau de valeurs numériques brutes
@@ -97,6 +99,29 @@ export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
     };
 
     return this.analyticsGrpcService.processData(payload).pipe(
+      tap(async (response) => {
+        // Enregistrement asynchrone dans Postgres via Prisma
+        try {
+          await this.prisma.processDataResult.create({
+            data: {
+              datasetId: response.dataset_id,
+              mean: response.mean,
+              min: response.min,
+              max: response.max,
+              processedValues: response.processed_values,
+              timeframe,
+            },
+          });
+          this.logger.log(
+            `Résultat d'analyse sauvegardé en base pour datasetId: ${datasetId}`,
+          );
+        } catch (dbError) {
+          this.logger.error(
+            `Erreur d'écriture Prisma dans [processData]:`,
+            dbError,
+          );
+        }
+      }),
       catchError((error) => {
         this.logger.error(
           `Erreur gRPC [processData] pour datasetId ${datasetId}:`,
@@ -110,6 +135,31 @@ export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
         );
       }),
     );
+  }
+
+  /**
+   * Sauvegarde un point de métrique individuel dans PostgreSQL
+   *
+   * @param metricType Type de la métrique (ex: 'cpu_usage', 'memory_usage')
+   * @param value Valeur numérique de la métrique
+   * @param timestamp Timestamp UNIX en secondes
+   */
+  async saveMetricPoint(metricType: string, value: number, timestamp: number) {
+    try {
+      return await this.prisma.metricEntry.create({
+        data: {
+          metricType,
+          value,
+          timestamp: new Date(timestamp * 1000),
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Erreur d'écriture Prisma [saveMetricPoint] pour ${metricType}:`,
+        error,
+      );
+      throw error;
+    }
   }
 
   /**
