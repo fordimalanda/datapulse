@@ -16,12 +16,6 @@ __pycache__/
 *.sqlite3
 *.db
 
-# Environment files
-.env
-.env.local
-.env.*.local
-**/.env
-
 # Docker
 docker-compose.override.yml
 .dockerignore
