@@ -47,12 +47,13 @@ services:
     container_name: datapulse-gateway
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - DATABASE_URL=postgresql://datapulse:datapulse_pass@postgres:5432/datapulse_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - ANALYTICS_GRPC_URL=analytics-service:50051
+      - PORT=3000
     depends_on:
       - postgres
       - redis
@@ -66,9 +67,10 @@ services:
     container_name: datapulse-web
     restart: always
     ports:
-      - "3001:3000"
+      - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_GATEWAY_URL=http://localhost:3001
     depends_on:
       - gateway
 
