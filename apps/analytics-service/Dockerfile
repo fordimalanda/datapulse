@@ -6,11 +6,11 @@ WORKDIR /app
 COPY apps/analytics-service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Création et compilation du dossier proto
+# Copie des schémas proto et compilation dans /app/proto
 COPY shared/proto ./proto
 RUN python -m grpc_tools.protoc -I./proto --python_out=./proto --grpc_python_out=./proto ./proto/analytics.proto
 
-# Copie du reste de l'application
+# Copie du reste du code source
 COPY apps/analytics-service/ .
 
 EXPOSE 50051

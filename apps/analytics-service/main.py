@@ -6,12 +6,16 @@ import math
 import random
 import grpc
 
-# Ajout dynamique du dossier /app et du sous-dossier proto au PYTHONPATH
+# Ajout explicite des chemins dans sys.path pour parer aux imports internes générés par protoc
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(CURRENT_DIR)
-sys.path.append(os.path.join(CURRENT_DIR, "proto"))
+PROTO_DIR = os.path.join(CURRENT_DIR, "proto")
 
-# Importation sécurisée des fichiers Protobuf générés
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+if PROTO_DIR not in sys.path:
+    sys.path.insert(0, PROTO_DIR)
+
+# Tente les imports selon la résolution des chemins
 try:
     import proto.analytics_pb2 as analytics_pb2
     import proto.analytics_pb2_grpc as analytics_pb2_grpc
@@ -38,7 +42,6 @@ class AnalyticsServiceServicer(analytics_pb2_grpc.AnalyticsServiceServicer):
             min_val = float(min(raw_values))
             max_val = float(max(raw_values))
 
-        # Simulation de transformation des valeurs
         processed = [round(v * 1.05, 2) for v in raw_values]
 
         return analytics_pb2.AnalyticsResponse(
@@ -54,15 +57,14 @@ class AnalyticsServiceServicer(analytics_pb2_grpc.AnalyticsServiceServicer):
         """
         RPC de Streaming Serveur : Génère et diffuse un flux temps réel de métriques
         """
-        metric_type = request.metric_type or "cpu_usage"
-        interval = max(request.interval_seconds, 1)
+        metric_type = getattr(request, 'metric_type', None) or "cpu_usage"
+        interval = max(getattr(request, 'interval_seconds', 1), 1)
 
         print(f"[Python Service] Nouveau stream démarré pour : {metric_type} (intervalle: {interval}s)")
 
         step = 0
         try:
             while context.is_active():
-                # Génération d'une courbe sinusoïdale réaliste avec du bruit
                 base_val = 45 + 25 * math.sin(step * 0.2)
                 noise = random.uniform(-5.0, 5.0)
                 current_value = round(max(0.0, min(100.0, base_val + noise)), 2)
