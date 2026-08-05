@@ -39,7 +39,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 
-  # 4. Gateway NestJS (Backend principal)
+  # 4. Gateway NestJS (Backend principal sur le port hôte 3001)
   gateway:
     build:
       context: .
@@ -59,7 +59,7 @@ services:
       - redis
       - analytics-service
 
-  # 5. Front-End Next.js
+  # 5. Front-End Next.js (Frontend sur le port hôte 3000)
   web:
     build:
       context: .
@@ -69,7 +69,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
       - NEXT_PUBLIC_GATEWAY_URL=http://localhost:3001
     depends_on:
       - gateway
